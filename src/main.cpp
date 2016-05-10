@@ -10,6 +10,7 @@
 #include <pcl/visualization/cloud_viewer.h>
 #include <pcl/features/normal_3d.h>
 #include <pcl/segmentation/region_growing.h>
+#include <iostream>
 #include <pcl/io/pcd_io.h>
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -22,18 +23,43 @@ using Cloud = pcl::PointCloud<PointType>;
 
 namespace fs = boost::filesystem;
 
+constexpr double operator"" _deg (long double deg) {
+  return deg * M_PI / 180.0;
+}
+
+constexpr double operator"" _deg (unsigned long long deg) {
+  return deg * M_PI / 180.0;
+}
+
+constexpr double operator"" _cm (long double cm) {
+  return cm / 100.0;
+}
+
+constexpr double operator"" _cm (unsigned long long cm) {
+  return cm / 100.0;
+}
+
+constexpr double operator"" _mm (long double mm) {
+  return mm / 1000.0;
+}
+
+constexpr double operator"" _mm (unsigned long long mm) {
+  return mm / 1000.0;
+}
+
 constexpr auto MAX_VALID_ARGS = 7;
-constexpr auto DEFAULT_Z_DISTANCE = 0.015;
-constexpr auto PLANE_THOLD = 0.02;
+constexpr auto DEFAULT_Z_DISTANCE = 15_mm;
+constexpr auto PLANE_THOLD = 2_cm;
 constexpr auto CLUSTER_TOLERANCE = 0.005;
 constexpr auto MIN_CLUSTER_SIZE = 100U;
 constexpr auto MAX_CLUSTER_SIZE = std::numeric_limits<unsigned int>::max();
 constexpr auto MAX_ITERATIONS_DEFAULT = 1000;
 constexpr auto SAC_SIGMA_DEFAULT = 2.0;
 constexpr auto REFINE_ITERATIONS_DEFAULT = 50;
-constexpr auto MIN_HEIGHT_FROM_HULL_DEFAULT = 0.005;
-constexpr auto MAX_HEIGHT_FROM_HULL_DEFAULT = 0.7;
+constexpr auto MIN_HEIGHT_FROM_HULL_DEFAULT = 0.5_cm;
+constexpr auto MAX_HEIGHT_FROM_HULL_DEFAULT = 70_cm;
 constexpr auto DEFAULT_HULL_CLOUD_FILENAME = "hull.pcd";
+
 
 auto printHelp(int argc, char **argv) -> void {
   using pcl::console::print_error;
@@ -90,9 +116,9 @@ auto euclideanClustering(Cloud::Ptr cloud,
   clustering.extract(clusters);
 
   // Find largest cluster and return indices
-  auto largest_cluster_index = std::size_t{0};
-  auto current_cluster_index = std::size_t{0};
-  auto max_points = std::size_t{0};
+  auto largest_cluster_index = 0UL;
+  auto current_cluster_index = 0UL;
+  auto max_points = 0UL;
   for (const auto &cluster: clusters) {
     if (cluster.indices.size() > max_points) {
       max_points = cluster.indices.size();
@@ -240,7 +266,7 @@ auto getPlaneIndices(Cloud::Ptr cloud,
   sac.refineModel(refine_sigma, refine_iterations);
 
   sac.getInliers(inliers_indices_ptr->indices);
-  
+
   return inliers_indices_ptr;
 }
 
