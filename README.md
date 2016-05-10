@@ -1,6 +1,6 @@
-# PCL Template Project
+# PCL Remove Table
 
-A brief description of the project.
+A tool to segment all points that lie on a planar surface in a point cloud. Can be used in single or batch mode.
 
 ## Installation
 
