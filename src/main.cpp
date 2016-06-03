@@ -108,13 +108,14 @@ auto expandTilde (std::string path_string) -> fs::path {
 
 auto extractIndices (Cloud::Ptr cloud,
                      pcl::PointIndicesPtr indices,
+                     bool keep_organised = false,
                      bool negative = false)
 -> Cloud::Ptr {
   auto extract = pcl::ExtractIndices <pcl::PointXYZRGBA>{};
   extract.setInputCloud (cloud);
   extract.setIndices (indices);
   if (cloud->isOrganized ())
-    extract.setKeepOrganized (true);
+    extract.setKeepOrganized (keep_organised);
   extract.setNegative (negative);
   auto extracted_cloud = boost::make_shared <Cloud> ();
   extract.filter (*extracted_cloud);
@@ -213,10 +214,7 @@ auto isSimilarIntensity (const PointType & point_a,
                          float squared_distance)
 -> bool {
   auto dist = (point_a.getRGBVector3i () - point_b.getRGBVector3i ()).cast <float> ().norm ();
-  if (dist < 5.0F)
-    return true;
-  else
-    return false;
+  return dist < 5.0F;
 }
 
 auto isSimilarCurvature (const PointTypeFull & point_a,
@@ -226,10 +224,7 @@ auto isSimilarCurvature (const PointTypeFull & point_a,
   auto point_a_normal = Eigen::Map <const Eigen::Vector3f>{point_a.normal};
   auto point_b_normal = Eigen::Map <const Eigen::Vector3f>{point_b.normal};
 
-  if (fabs (point_a_normal.dot (point_b_normal)) < 0.2)
-    return true;
-  else
-    return false;
+  return (fabs (point_a_normal.dot (point_b_normal)) < 0.2);
 }
 
 auto euclideanClusteringConditional (Cloud::Ptr cloud, double cluster_tolerance)
@@ -403,7 +398,7 @@ auto getTableConvexHull (Cloud::Ptr table_cloud)
   hull.setInputCloud (table_cloud);
   hull.reconstruct (*convex_hull_cloud);
 
-  if (hull.getDimension () != 2) {
+  if (hull.getDimension () != 2 || convex_hull_cloud->size () == 0) {
 
     pcl::console::print_error ("The input cloud does not represent a planar surface for hull.\n");
     return nullptr;
@@ -677,14 +672,14 @@ auto main (int argc, char ** argv) -> int {
     // Get table hull cloud and get points above table cloud
     auto table_hull = getTableConvexHull (table_cloud);
 
-    auto table_hull_file = output_dir / DEFAULT_HULL_CLOUD_FILENAME;
-    if (pcl::io::savePCDFile (table_hull_file.string (), *table_hull) == -1) {
-      pcl::console::print_error ("Failed to save: %s\n", table_hull_file);
+    if (!table_hull) {
+      pcl::console::print_error ("No planar surface in the given cloud");
       return -1;
     }
 
-    if (!table_hull) {
-      pcl::console::print_error ("No planar surface in the given cloud");
+    auto table_hull_file = output_dir / DEFAULT_HULL_CLOUD_FILENAME;
+    if (pcl::io::savePCDFile (table_hull_file.string (), *table_hull) == -1) {
+      pcl::console::print_error ("Failed to save: %s\n", table_hull_file);
       return -1;
     }
 
