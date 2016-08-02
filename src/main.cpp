@@ -509,6 +509,7 @@ auto threadedHullSegmentation (std::deque <fs::path> & paths_deque,
                                double min_height_from_hull = DEFAULT_Z_DISTANCE)
 -> bool {
 
+  // TODO: Use emplace_back instead of push_back
   auto runners = std::vector <std::shared_ptr <std::thread>>{};
   auto num_threads_to_use = std::thread::hardware_concurrency ();
 
