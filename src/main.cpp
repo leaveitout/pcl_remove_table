@@ -80,7 +80,7 @@ auto printHelp (int argc, char ** argv) -> void {
   using pcl::console::print_info;
 
   print_error ("Syntax is: %s [-z] [-d 0.015] (<path-to-pcd-files> <path-to-store-output>) | "
-                   "(<pcd-file> <output-pcd-file> <plane-coords-yml>)| -h | --help\n", argv[0]);
+                   "(<pcd-file> <output-pcd-file> <plane-hull-pcd>)| -h | --help\n", argv[0]);
   print_info ("%s -h | --help : shows this help\n", argv[0]);
   print_info ("-d xx : Distance xx in metres from surface below which all points "
                   "will be discarded.\n");
@@ -602,6 +602,16 @@ auto main (int argc, char ** argv) -> int {
     }
 
     auto output_cloud = getPointsAboveConvexHull (input_cloud, table_hull, distance);
+
+    if (pcl::io::savePCDFile (output_table_pcd_file.string (), *table_hull) == -1) {
+      pcl::console::print_error ("Failed to save: %s\n", output_table_pcd_file);
+      return -1;
+    }
+
+    if (pcl::io::savePCDFile (output_pcd_file.string (), *output_cloud) == -1) {
+      pcl::console::print_error ("Failed to save: %s\n", output_pcd_file);
+      return -1;
+    }
 
     // Visualize both the original and the result.
     auto viewer = pcl::visualization::PCLVisualizer{"Cloud Viewer"};
