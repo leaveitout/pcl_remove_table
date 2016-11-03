@@ -31,33 +31,42 @@ using CloudWithNormals = pcl::PointCloud <PointTypeFull>;
 
 namespace fs = boost::filesystem;
 
+// formatter:off
 constexpr size_t operator "" _sz (unsigned long long size) {
   return size_t{size};
 }
+
 
 constexpr double operator "" _deg (long double deg) {
   return deg * M_PI / 180.0;
 }
 
+
 constexpr double operator "" _deg (unsigned long long deg) {
   return deg * M_PI / 180.0;
 }
+
 
 constexpr double operator "" _cm (long double cm) {
   return cm / 100.0;
 }
 
+
 constexpr double operator "" _cm (unsigned long long cm) {
   return cm / 100.0;
 }
+
 
 constexpr double operator "" _mm (long double mm) {
   return mm / 1000.0;
 }
 
+
 constexpr double operator "" _mm (unsigned long long mm) {
   return mm / 1000.0;
 }
+// formatter:on
+
 
 constexpr auto MIN_VALID_ARGS = 3;
 constexpr auto MAX_VALID_ARGS = 7;
@@ -75,6 +84,7 @@ constexpr auto DEFAULT_HULL_CLOUD_FILENAME = "hull.pcd";
 
 std::mutex deque_mutex;
 
+
 auto printHelp (int argc, char ** argv) -> void {
   using pcl::console::print_error;
   using pcl::console::print_info;
@@ -86,6 +96,7 @@ auto printHelp (int argc, char ** argv) -> void {
                   "will be discarded.\n");
   print_info ("-z : Get all points below the planar surface.\n");
 }
+
 
 auto getPcdFilesInPath (fs::path const & pcd_dir)
 -> std::deque <fs::path> {
@@ -100,11 +111,13 @@ auto getPcdFilesInPath (fs::path const & pcd_dir)
   return result_set;
 }
 
+
 auto expandTilde (std::string path_string) -> fs::path {
   if (path_string.at (0) == '~')
     path_string.replace (0, 1, getenv ("HOME"));
   return fs::path{path_string};
 }
+
 
 auto extractIndices (Cloud::Ptr cloud,
                      pcl::PointIndicesPtr indices,
@@ -121,6 +134,7 @@ auto extractIndices (Cloud::Ptr cloud,
   extract.filter (*extracted_cloud);
   return extracted_cloud;
 }
+
 
 // Euclidean Clustering
 auto euclideanClustering (Cloud::Ptr cloud,
@@ -163,6 +177,7 @@ auto euclideanClustering (Cloud::Ptr cloud,
   auto indicesPtr = boost::make_shared <pcl::PointIndices> (clusters.at (largest_cluster_index));
   return indicesPtr;
 }
+
 
 auto euclideanClusteringNormals (Cloud::Ptr cloud, double cluster_tolerance)
 -> Cloud::Ptr {
@@ -209,6 +224,7 @@ auto euclideanClusteringNormals (Cloud::Ptr cloud, double cluster_tolerance)
   auto indices_ptr = boost::make_shared <pcl::PointIndices> (clusters.at (largest_cluster_index));
 }
 
+
 auto isSimilarIntensity (const PointType & point_a,
                          const PointType & point_b,
                          float squared_distance)
@@ -216,6 +232,7 @@ auto isSimilarIntensity (const PointType & point_a,
   auto dist = (point_a.getRGBVector3i () - point_b.getRGBVector3i ()).cast <float> ().norm ();
   return dist < 5.0F;
 }
+
 
 auto isSimilarCurvature (const PointTypeFull & point_a,
                          const PointTypeFull & point_b,
@@ -226,6 +243,7 @@ auto isSimilarCurvature (const PointTypeFull & point_a,
 
   return (fabs (point_a_normal.dot (point_b_normal)) < 0.2);
 }
+
 
 auto euclideanClusteringConditional (Cloud::Ptr cloud, double cluster_tolerance)
 -> Cloud::Ptr {
@@ -264,6 +282,7 @@ auto euclideanClusteringConditional (Cloud::Ptr cloud, double cluster_tolerance)
   auto indices_ptr = boost::make_shared <pcl::PointIndices> (clusters.at (largest_cluster_index));
   return extractIndices (cloud, indices_ptr);
 }
+
 
 auto getLargestRegion (Cloud::Ptr cloud,
                        double smoothness_degrees = 20.0,
@@ -319,6 +338,7 @@ auto getLargestRegion (Cloud::Ptr cloud,
   return extractIndices (cloud, indices_ptr);
 }
 
+
 auto getPlaneIndices (Cloud::Ptr cloud,
                       double plane_thold = PLANE_THOLD,
                       int max_iterations = MAX_ITERATIONS_DEFAULT,
@@ -345,13 +365,15 @@ auto getPlaneIndices (Cloud::Ptr cloud,
   return inliers_indices_ptr;
 }
 
+
 auto getTable (Cloud::Ptr cloud,
                double plane_thold = PLANE_THOLD,
                int max_iterations = MAX_ITERATIONS_DEFAULT,
                double refine_sigma = SAC_SIGMA_DEFAULT,
                int refine_iterations = REFINE_ITERATIONS_DEFAULT)
 -> Cloud::Ptr {
-  auto point_indices = getPlaneIndices (cloud);
+  auto point_indices =
+      getPlaneIndices (cloud, plane_thold, max_iterations, refine_sigma, refine_iterations);
 
   if (point_indices->indices.size () == 0) {
     pcl::console::print_highlight ("No plane to be found in input pcd.\n");
@@ -365,6 +387,7 @@ auto getTable (Cloud::Ptr cloud,
   return extractIndices (extracted_plane, largest_cluster_indices);
 }
 
+
 /**
  * This function removes the table from cloud and returns the table as a cloud
  */
@@ -374,7 +397,8 @@ auto removeTable (Cloud::Ptr & cloud,
                   double refine_sigma = SAC_SIGMA_DEFAULT,
                   int refine_iterations = REFINE_ITERATIONS_DEFAULT)
 -> Cloud::Ptr {
-  auto point_indices = getPlaneIndices (cloud);
+  auto point_indices =
+      getPlaneIndices (cloud, plane_thold, max_iterations, refine_sigma, refine_iterations);
 
   if (point_indices->indices.size () == 0) {
     pcl::console::print_highlight ("No plane to be found in input cloud.\n");
@@ -387,8 +411,10 @@ auto removeTable (Cloud::Ptr & cloud,
 
   cloud = extractIndices (cloud, point_indices, true);
 
+//  return extracted_plane;
   return extractIndices (extracted_plane, largest_cluster_indices);
 }
+
 
 auto getTableConvexHull (Cloud::Ptr table_cloud)
 -> Cloud::Ptr {
@@ -408,6 +434,7 @@ auto getTableConvexHull (Cloud::Ptr table_cloud)
   }
 }
 
+
 auto getPointsAboveConvexHull (Cloud::Ptr cloud,
                                Cloud::Ptr convex_hull_cloud,
                                double min_height = MIN_HEIGHT_FROM_HULL_DEFAULT,
@@ -422,13 +449,13 @@ auto getPointsAboveConvexHull (Cloud::Ptr cloud,
       auto indices_ptr = boost::make_shared <pcl::PointIndices> ();
       prism.segment (*indices_ptr);
       return extractIndices (cloud, indices_ptr, true);
-    }
-    else {
+    } else {
       pcl::console::print_error ("The input cloud does not represent a planar surface for hull.\n");
       return nullptr;
     }
   }
 }
+
 
 auto removeOutliers (Cloud::Ptr cloud, int mean_k = 50, float sigma_mult = 1.0)
 -> Cloud::Ptr {
@@ -442,6 +469,7 @@ auto removeOutliers (Cloud::Ptr cloud, int mean_k = 50, float sigma_mult = 1.0)
 
   return inlier_cloud;
 }
+
 
 // Thread-safe deque access
 auto getFront (std::deque <fs::path> & paths_set_deque)
@@ -458,6 +486,7 @@ auto getFront (std::deque <fs::path> & paths_set_deque)
   return next_cloud_path;
 }
 
+
 // TODO: Make thread-safe
 auto processHullSegmentation (fs::path input_cloud_path,
                               fs::path output_cloud_path,
@@ -471,8 +500,8 @@ auto processHullSegmentation (fs::path input_cloud_path,
     return false;
   }
 
-  auto
-      output_cloud = getPointsAboveConvexHull (input_cloud, table_hull_cloud, min_height_from_hull);
+  auto output_cloud =
+      getPointsAboveConvexHull (input_cloud, table_hull_cloud, min_height_from_hull);
 
   if (pcl::io::savePCDFileBinaryCompressed <pcl::PointXYZRGBA> (output_cloud_path.string (),
                                                                 *output_cloud) == -1) {
@@ -484,6 +513,7 @@ auto processHullSegmentation (fs::path input_cloud_path,
 
   return true;
 }
+
 
 auto segmentationRunner (std::deque <fs::path> & paths_deque,
                          fs::path output_dir,
@@ -502,6 +532,7 @@ auto segmentationRunner (std::deque <fs::path> & paths_deque,
   }
   Logger::log (Logger::INFO, "Thread exiting.\n");
 }
+
 
 auto threadedHullSegmentation (std::deque <fs::path> & paths_deque,
                                fs::path output_dir,
@@ -528,6 +559,7 @@ auto threadedHullSegmentation (std::deque <fs::path> & paths_deque,
 
   return true;
 }
+
 
 auto main (int argc, char ** argv) -> int {
   pcl::console::print_highlight (
@@ -561,6 +593,10 @@ auto main (int argc, char ** argv) -> int {
     consumed_args += 2;
   ss << "Using distance of " << distance << " meters." << std::endl;
 
+  auto inverse = false;
+  if (pcl::console::find_switch (argc, argv, "-z"))
+    inverse = true;
+
   // Check if we are working with pcd files
   auto pcd_arg_indices = pcl::console::parse_file_extension_argument (argc, argv, ".pcd");
   if (pcd_arg_indices.size () == 3) {
@@ -587,11 +623,11 @@ auto main (int argc, char ** argv) -> int {
     // Get table
     auto table_cloud = removeTable (input_cloud);
 
-    table_cloud = removeOutliers (table_cloud);
-    //    table_cloud = removeOutliers(table_cloud);
-    //    table_cloud = euclideanClusteringNormals(table_cloud, 0.1);
-    //    table_cloud = getLargestRegion(table_cloud);
-    //    table_cloud = euclideanClusteringConditional(table_cloud, CLUSTER_TOLERANCE);
+      table_cloud = removeOutliers (table_cloud);
+    //  table_cloud = removeOutliers(table_cloud);
+    //  table_cloud = euclideanClusteringNormals(table_cloud, 0.1);
+    //  table_cloud = getLargestRegion(table_cloud);
+    //  table_cloud = euclideanClusteringConditional(table_cloud, CLUSTER_TOLERANCE);
 
     // Get table hull cloud and get points above table cloud
     auto table_hull = getTableConvexHull (table_cloud);
@@ -601,7 +637,15 @@ auto main (int argc, char ** argv) -> int {
       return -1;
     }
 
-    auto output_cloud = getPointsAboveConvexHull (input_cloud, table_hull, distance);
+    auto min_height = distance;
+    auto max_height = std::numeric_limits <double>::max ();
+
+    if (inverse) {
+      min_height = -50.0;
+      max_height = -distance;
+    }
+
+    auto output_cloud = getPointsAboveConvexHull (input_cloud, table_hull, min_height, max_height);
 
     if (pcl::io::savePCDFile (output_table_pcd_file.string (), *table_hull) == -1) {
       pcl::console::print_error ("Failed to save: %s\n", output_table_pcd_file);
@@ -621,8 +665,8 @@ auto main (int argc, char ** argv) -> int {
         pcl::visualization::PointCloudColorHandlerCustom <PointType>{table_cloud, 0, 0, 255};
     auto output_color_handler =
         pcl::visualization::PointCloudColorHandlerCustom <PointType>{output_cloud, 255, 200, 200};
-    //    viewer.addPointCloud(table_cloud, "table");
-    viewer.addPointCloud (output_cloud, output_color_handler, "output");
+    viewer.addPointCloud (table_cloud, "table");
+//    viewer.addPointCloud (output_cloud, output_color_handler, "output");
     //    viewer.addPointCloud(table_cloud, table_color_handler, "table");
     viewer.addPolygon <PointType> (table_hull, 1.0, 0.0, 0.0);
 
@@ -635,8 +679,7 @@ auto main (int argc, char ** argv) -> int {
     while (!viewer.wasStopped ()) {
       viewer.spinOnce ();
     }
-  }
-  else {
+  } else {
     // We are working with folders
     auto input_dir = expandTilde (std::string{argv[argc - 2]});
     if (!fs::exists (input_dir) || !fs::is_directory (input_dir)) {
