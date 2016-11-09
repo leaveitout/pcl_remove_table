@@ -70,7 +70,7 @@ constexpr double operator "" _mm (unsigned long long mm) {
 
 constexpr auto MIN_VALID_ARGS = 3;
 constexpr auto MAX_VALID_ARGS = 7;
-constexpr auto DEFAULT_Z_DISTANCE = 15_mm;
+constexpr auto DEFAULT_Z_DISTANCE = 20_mm;
 constexpr auto PLANE_THOLD = 2_cm;
 constexpr auto CLUSTER_TOLERANCE = 0.005;
 constexpr auto MIN_CLUSTER_SIZE = 100U;
