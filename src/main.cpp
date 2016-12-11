@@ -69,7 +69,7 @@ constexpr double operator "" _mm (unsigned long long mm) {
 
 
 constexpr auto MIN_VALID_ARGS = 3;
-constexpr auto MAX_VALID_ARGS = 7;
+constexpr auto MAX_VALID_ARGS = 8;
 constexpr auto DEFAULT_Z_DISTANCE = 20_mm;
 constexpr auto PLANE_THOLD = 2_cm;
 constexpr auto CLUSTER_TOLERANCE = 0.005;
@@ -95,6 +95,7 @@ auto printHelp (int argc, char ** argv) -> void {
   print_info ("-d xx : Distance xx in metres from surface below which all points "
                   "will be discarded.\n");
   print_info ("-z : Get all points below the planar surface.\n");
+  print_info ("-v : Visualize the result.\n");
 }
 
 
@@ -593,6 +594,10 @@ auto main (int argc, char ** argv) -> int {
     consumed_args += 2;
   ss << "Using distance of " << distance << " meters." << std::endl;
 
+  auto visualize = false;
+  if (pcl::console::find_switch (argc, argv, "-v"))
+    visualize = true;
+
   auto inverse = false;
   if (pcl::console::find_switch (argc, argv, "-z"))
     inverse = true;
@@ -657,27 +662,29 @@ auto main (int argc, char ** argv) -> int {
       return -1;
     }
 
-    // Visualize both the original and the result.
-    auto viewer = pcl::visualization::PCLVisualizer{"Cloud Viewer"};
+    if (visualize) {
+      // Visualize both the original and the result.
+      auto viewer = pcl::visualization::PCLVisualizer{"Cloud Viewer"};
 
-    // Change colors
-    auto table_color_handler =
-        pcl::visualization::PointCloudColorHandlerCustom <PointType>{table_cloud, 0, 0, 255};
-    auto output_color_handler =
-        pcl::visualization::PointCloudColorHandlerCustom <PointType>{output_cloud, 255, 200, 200};
-    viewer.addPointCloud (table_cloud, "table");
-//    viewer.addPointCloud (output_cloud, output_color_handler, "output");
-    //    viewer.addPointCloud(table_cloud, table_color_handler, "table");
-    viewer.addPolygon <PointType> (table_hull, 1.0, 0.0, 0.0);
+      // Change colors
+      auto table_color_handler =
+          pcl::visualization::PointCloudColorHandlerCustom <PointType>{table_cloud, 0, 0, 255};
+      auto output_color_handler =
+          pcl::visualization::PointCloudColorHandlerCustom <PointType>{output_cloud, 255, 200, 200};
+      viewer.addPointCloud (table_cloud, "table");
+  //    viewer.addPointCloud (output_cloud, output_color_handler, "output");
+      //    viewer.addPointCloud(table_cloud, table_color_handler, "table");
+      viewer.addPolygon <PointType> (table_hull, 1.0, 0.0, 0.0);
 
-    viewer.initCameraParameters ();
-    pcl::visualization::Camera camera;
-    viewer.getCameraParameters (camera);
-    camera.view[1] *= -1;
-    viewer.setCameraParameters (camera);
+      viewer.initCameraParameters ();
+      pcl::visualization::Camera camera;
+      viewer.getCameraParameters (camera);
+      camera.view[1] *= -1;
+      viewer.setCameraParameters (camera);
 
-    while (!viewer.wasStopped ()) {
-      viewer.spinOnce ();
+      while (!viewer.wasStopped ()) {
+        viewer.spinOnce ();
+      }
     }
   } else {
     // We are working with folders
