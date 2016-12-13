@@ -476,14 +476,20 @@ auto removeOutliers (Cloud::Ptr cloud, int mean_k = 50, float sigma_mult = 1.0)
 auto getFront (std::deque <fs::path> & paths_set_deque)
 -> fs::path {
   auto next_cloud_path = fs::path{};
-  std::lock_guard <std::mutex> lock {deque_mutex};
-  if (!paths_set_deque.empty ()) {
-    next_cloud_path = paths_set_deque.front ();
-    paths_set_deque.pop_front ();
-    if (paths_set_deque.size () % 10 == 0) {
-      Logger::log (Logger::INFO, "%u items remaining in deque.\n", paths_set_deque.size ());
+  auto paths_remaining = 0UL;
+  {
+    std::lock_guard<std::mutex> lock{deque_mutex};
+    if (!paths_set_deque.empty()) {
+      next_cloud_path = paths_set_deque.front();
+      paths_set_deque.pop_front();
     }
+    paths_remaining = paths_set_deque.size();
   }
+
+  if (paths_remaining % 10 == 0) {
+    Logger::log(Logger::INFO, "%u items remaining in deque.\n", paths_remaining);
+  }
+
   return next_cloud_path;
 }
 
@@ -521,15 +527,16 @@ auto segmentationRunner (std::deque <fs::path> & paths_deque,
                          Cloud::Ptr table_hull_cloud,
                          double min_height_from_hull = DEFAULT_Z_DISTANCE)
 -> bool {
-  auto input_pcd_file = getFront (paths_deque);
 
   while (!paths_deque.empty ()) {
-    auto output_pcd_file = output_dir / input_pcd_file.filename ();
-    processHullSegmentation (input_pcd_file,
-                             output_pcd_file,
-                             table_hull_cloud,
-                             min_height_from_hull);
-    input_pcd_file = getFront (paths_deque);
+    auto input_pcd_file = getFront (paths_deque);
+    if (input_pcd_file != fs::path {}) {
+      auto output_pcd_file = output_dir / input_pcd_file.filename ();
+      processHullSegmentation (input_pcd_file,
+                               output_pcd_file,
+                               table_hull_cloud,
+                               min_height_from_hull);
+    }
   }
   Logger::log (Logger::INFO, "Thread exiting.\n");
 }
@@ -710,11 +717,13 @@ auto main (int argc, char ** argv) -> int {
 
     // We have the input and output dir now
     auto input_files = getPcdFilesInPath (input_dir);
+    std::sort(input_files.begin(), input_files.end());
+    std::cout << "Found " << input_files.size() << " pcd files...." << std::endl;
 
     // Load an input pcd
     auto input_cloud = boost::make_shared <Cloud> ();
     auto mid_point = input_files.size () / 2;
-    auto sample_cloud_file = input_files.at (mid_point);
+    auto sample_cloud_file = input_files.at (0UL);
     if (pcl::io::loadPCDFile <pcl::PointXYZRGBA> (sample_cloud_file.c_str (), *input_cloud) == -1) {
       pcl::console::print_error ("Failed to load: %s\n", sample_cloud_file.c_str ());
       printHelp (argc, argv);
